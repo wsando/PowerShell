@@ -4,13 +4,14 @@
 
 $computers = Get-Content -Path "computers.txt"
 $taskName = "TaskName"
+$credential = Get-Credential
 
 foreach ($computer in $computers) {
     try {
         Invoke-Command -ComputerName $computer -ScriptBlock {
             param ($taskName)
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-        } -ArgumentList $taskName -Credential (Get-Credential)
+        } -ArgumentList $taskName -Credential $using:credential
         Write-Host "Successfully deleted task on $computer"
     } catch {
         Write-Host "Failed to delete task on $computer"
