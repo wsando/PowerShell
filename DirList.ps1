@@ -1,3 +1,4 @@
+# This script will get a list of all directories and subdirectories in the specified path.
 # Define the root directory to start listing from
 $rootDirectory = "C:\Path\To\Root\Directory"
 

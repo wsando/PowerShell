@@ -1,3 +1,4 @@
+#This script will crawl a direcotry and list all files and their last accessed time.
 # Define the directory path to search
 $directoryPath = "C:\Path\To\Your\Directory"
 
