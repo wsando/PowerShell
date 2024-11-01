@@ -32,7 +32,8 @@ foreach ($server in $servers) {
         }
     }
     catch {
-        Write-Output "Failed to retrieve data for $server: $_"
+        Write-Output "Failed to retrieve data for ${server}: $_"
+
     }
 }
 
