@@ -1,4 +1,4 @@
-$credentials = Get-Credential -Credential billsandusky@alplighting.com
+$credentials = Get-Credential -Credential USERNAMEHERE@DOMAIN.com
     Write-Output "Getting the Exchange Online cmdlets"
  
     $session = New-PSSession -ConnectionUri https://outlook.office365.com/powershell-liveid/ `
