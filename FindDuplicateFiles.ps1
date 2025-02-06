@@ -3,11 +3,8 @@
 
 
 # Define the folder to scan (modify as needed)
-$FolderPath = "D:\YourFolder"  # Change to your target directory
+$FolderPath = "D:\YourFolder"  # Change this to your target directory
 $OutputCSV = "C:\DuplicateFiles.csv"
-
-# Enable long path support by using the \\?\ prefix
-$FolderPath = "\\?\$FolderPath"
 
 # Hash table to store file hashes
 $FileHashes = @{}
@@ -16,11 +13,15 @@ $DuplicateFiles = @()
 # Function to calculate SHA256 hash of a file
 Function Get-FileHashSHA256($FilePath) {
     try {
+        # Use long path prefix for accessing the file
+        $LongPath = "\\?\$FilePath"
+
         # Read file stream and compute hash
-        $Stream = [System.IO.File]::OpenRead($FilePath)
+        $Stream = [System.IO.File]::OpenRead($LongPath)
         $Hasher = [System.Security.Cryptography.SHA256]::Create()
         $HashBytes = $Hasher.ComputeHash($Stream)
         $Stream.Close()
+
         return ([BitConverter]::ToString($HashBytes) -replace "-", "").ToLower()
     } catch {
         Write-Host "Error processing file: $FilePath`n$_" -ForegroundColor Red
@@ -30,13 +31,12 @@ Function Get-FileHashSHA256($FilePath) {
 
 # Get all files in the directory (recursively, ignoring access errors)
 Write-Host "Scanning files in $FolderPath..."
-$Files = Get-ChildItem -Path $FolderPath -Recurse -File -ErrorAction SilentlyContinue
+$Files = Get-ChildItem -Path $FolderPath -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName.Length -lt 32767 }
 
 # Process each file
 foreach ($File in $Files) {
-    $FilePath = $File.FullName
-    $FilePath = "\\?\$FilePath"  # Ensure long path support
-    
+    $FilePath = $File.FullName  # No \\?\ prefix here for Get-ChildItem results
+
     $Hash = Get-FileHashSHA256 -FilePath $FilePath
     if ($Hash) {
         if ($FileHashes.ContainsKey($Hash)) {
