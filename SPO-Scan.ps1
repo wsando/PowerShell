@@ -1,6 +1,5 @@
 # This script will crawl a given path for files with illegal charachters in the name or paths too long to migrate.
 
-
 # Set the root path to scan
 $RootPath = "C:\Your\Target\Directory"
 $ExportCsv = "C:\Temp\InvalidFilesReport.csv"
@@ -46,3 +45,8 @@ foreach ($File in $Files) {
 # Export to CSV
 if ($ProblemFiles.Count -gt 0) {
     $ProblemFiles | Sort-Object IssueDetected, FilePath | Export-Csv -Path $ExportCsv -NoTypeInformation
+    Write-Host "`nScan complete. Issues found: $($ProblemFiles.Count)" -ForegroundColor Green
+    Write-Host "Results exported to: $ExportCsv" -ForegroundColor Cyan
+} else {
+    Write-Host "`nScan complete. No issues found." -ForegroundColor Green
+}
