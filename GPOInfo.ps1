@@ -41,9 +41,19 @@ foreach ($gpo in $allGPOs) {
     $settings | Export-Csv -Path $csvPath -NoTypeInformation
 
     # Gather metadata: Linked OUs
-    $linkedOUs = (Get-GPOLink -Guid $gpo.Id -Domain $gpo.DomainName -ErrorAction SilentlyContinue) | ForEach-Object {
-        $_.Target
-    }
+    
+    # Linked OUs from XML
+$linkedOUs = $xml.GPO.LinksTo.SOMPath -join "; "
+
+# Security Filtering
+$acl = Get-GPPermission -Guid $gpo.Id -All | Where-Object { $_.Permission -match "GpoApply" } | Select-Object -ExpandProperty Trustee
+
+# WMI Filter
+$wmiFilter = if ($gpo.WmiFilter.Name) {
+    "$($gpo.WmiFilter.Name): $($gpo.WmiFilter.Query)"
+} else {
+    "None"
+}
 
     # Security Filtering
     $acl = Get-GPPermission -Guid $gpo.Id -All | Where-Object { $_.Permission -match "GpoApply" } | Select-Object -ExpandProperty Trustee
