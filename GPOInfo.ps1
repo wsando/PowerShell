@@ -15,7 +15,7 @@ foreach ($gpo in $allGPOs) {
     $gpoNameSafe = ($gpo.DisplayName -replace '[\\/:*?"<>|]', '_')
     $csvPath = Join-Path $settingsPath "$gpoNameSafe.csv"
 
-    # Get XML report and parse
+    # Export XML and parse
     $reportXml = Get-GPOReport -Guid $gpo.Id -ReportType Xml
     [xml]$xml = $reportXml
 
@@ -24,9 +24,15 @@ foreach ($gpo in $allGPOs) {
     foreach ($scope in @("Computer", "User")) {
         $extensionsNode = $xml.GPO.$scope.ExtensionData
         if ($extensionsNode -and $extensionsNode.Extension) {
-            $extensions = $extensionsNode.Extension
+            $extensions = @()
+            if ($extensionsNode.Extension -is [System.Xml.XmlElement]) {
+                $extensions += $extensionsNode.Extension
+            } else {
+                $extensions += $extensionsNode.Extension
+            }
+
             foreach ($ext in $extensions) {
-                # Admin Template Policies
+                # 1. Admin Template Policies
                 if ($ext.Policy) {
                     foreach ($setting in $ext.Policy) {
                         $settings += [PSCustomObject]@{
@@ -41,7 +47,7 @@ foreach ($gpo in $allGPOs) {
                     }
                 }
 
-                # Windows Settings (e.g., Scripts, Folder Redirection, etc.)
+                # 2. Windows Settings (Scripts, Folder Redirection, etc.)
                 if ($ext.Properties) {
                     foreach ($prop in $ext.Properties.ChildNodes) {
                         $settings += [PSCustomObject]@{
@@ -55,11 +61,26 @@ foreach ($gpo in $allGPOs) {
                         }
                     }
                 }
+
+                # 3. Catch-all for other extension settings (like IE/SoftwareInstall/etc.)
+                foreach ($child in $ext.ChildNodes) {
+                    if ($child.Name -notin @("Policy", "Properties")) {
+                        $settings += [PSCustomObject]@{
+                            GPOName       = $gpo.DisplayName
+                            Scope         = $scope
+                            SettingName   = $child.Name
+                            SettingPath   = "$($ext.Name)\$($child.Name)"
+                            Value         = $child.InnerText
+                            RegistryKey   = "N/A"
+                            RegistryValue = "N/A"
+                        }
+                    }
+                }
             }
         }
     }
 
-    # Always export, even if empty
+    # Always export CSV, even if empty
     $settings | Export-Csv -Path $csvPath -NoTypeInformation
 
     # Linked OUs
@@ -77,7 +98,7 @@ foreach ($gpo in $allGPOs) {
         "None"
     }
 
-    # Summary
+    # Summary metadata
     $summaryList += [PSCustomObject]@{
         GPOName           = $gpo.DisplayName
         GUID              = $gpo.Id
@@ -90,10 +111,10 @@ foreach ($gpo in $allGPOs) {
         WMIFilter         = $wmiFilter
     }
 
-    Write-Host "Exported $($gpo.DisplayName): $($settings.Count) settings"
+    Write-Host "✅ Exported $($gpo.DisplayName): $($settings.Count) settings"
 }
 
-# Export summary
+# Final summary export
 $summaryList | Export-Csv -Path (Join-Path $summaryPath "GPO_Inventory_Summary.csv") -NoTypeInformation
 
-Write-Host "ALL GPO inventory complete. Files saved to: $basePath"
+Write-Host "`n🎉 GPO export complete! All files saved to: $basePath"
