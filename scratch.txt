@@ -1,0 +1,10 @@
+[xml]$xml = Get-GPOReport -Name "YourGPOName" -ReportType Xml
+
+# Check if User section even exists
+$xml.GPO.User.ExtensionData.Extension
+
+# See if it has Policies
+$xml.GPO.User.ExtensionData.Extension.Policy
+
+# Check if it has Properties (for scripts, etc.)
+$xml.GPO.User.ExtensionData.Extension.Properties
