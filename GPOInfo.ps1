@@ -96,4 +96,4 @@ foreach ($gpo in $allGPOs) {
 # Export summary
 $summaryList | Export-Csv -Path (Join-Path $summaryPath "GPO_Inventory_Summary.csv") -NoTypeInformation
 
-Write-Host "`n✅ GPO inventory complete. Files saved to: $basePath"
+Write-Host "ALL GPO inventory complete. Files saved to: $basePath"
