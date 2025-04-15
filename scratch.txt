@@ -8,3 +8,8 @@ $xml.GPO.User.ExtensionData.Extension.Policy
 
 # Check if it has Properties (for scripts, etc.)
 $xml.GPO.User.ExtensionData.Extension.Properties
+
+
+Get-Mailbox -Identity "SharedMailbox@yourdomain.com" | Format-List AuditEnabled
+
+
