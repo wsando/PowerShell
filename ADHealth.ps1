@@ -2,34 +2,37 @@
 
 Import-Module ActiveDirectory
 
-# Set reference time for drift check
+# Local reference time
 $localTime = Get-Date
-$domainControllers = Get-ADDomainController -Filter *
 $fsmo = netdom query fsmo
+$domainControllers = Get-ADDomainController -Filter *
 
 $results = foreach ($dc in $domainControllers) {
-    $ping = Test-Connection -ComputerName $dc.HostName -Count 1 -Quiet
-    $fsmos = ($fsmo -match $dc.HostName) -join ', '
+    $hostname = $dc.HostName
+    $ip = ($dc | Select-Object -ExpandProperty IPv4Address).IPAddressToString
+    $osVersion = (Get-ADComputer $dc.Name -Properties OperatingSystem).OperatingSystem
+    $fsmos = ($fsmo -match $hostname) -join ', '
+    $ping = Test-Connection -ComputerName $hostname -Count 1 -Quiet
 
     if ($ping) {
         try {
-            $os = Get-CimInstance -ComputerName $dc.HostName -ClassName Win32_OperatingSystem
+            $os = Get-CimInstance -ComputerName $hostname -ClassName Win32_OperatingSystem -ErrorAction Stop
             $uptime = $os.LastBootUpTime
-            $currentTime = [datetime]::ParseExact($os.LocalDateTime, "yyyyMMddHHmmss.000000+000", $null)
-            $timeDrift = ($currentTime - $localTime).TotalSeconds
+            $currentTime = $os.LocalDateTime
+            $parsedTime = [System.Management.ManagementDateTimeConverter]::ToDateTime($currentTime)
+            $timeDrift = ($parsedTime - $localTime).TotalSeconds
 
-            $dnsStatus = Get-Service -ComputerName $dc.HostName -Name DNS -ErrorAction SilentlyContinue
+            $dnsStatus = Get-Service -ComputerName $hostname -Name DNS -ErrorAction SilentlyContinue
+            $netlogon = Test-Path -Path "\\$hostname\netlogon"
+            $sysvol = Test-Path -Path "\\$hostname\sysvol"
 
-            $netlogon = Test-Path -Path "\\$($dc.HostName)\netlogon"
-            $sysvol = Test-Path -Path "\\$($dc.HostName)\sysvol"
-
-            $repStatus = (repadmin /replsummary | Select-String $dc.HostName) -join ', '
+            $repStatus = (repadmin /replsummary | Select-String $hostname) -join ', '
 
             [PSCustomObject]@{
                 Name              = $dc.Name
                 Site              = $dc.Site
-                IPv4Address       = $dc.IPv4Address.IPAddressToString
-                OSVersion         = $dc.OperatingSystem
+                IPv4Address       = $ip
+                OSVersion         = $osVersion
                 IsGlobalCatalog   = $dc.IsGlobalCatalog
                 IsReadOnly        = $dc.IsReadOnly
                 FSMOHolder        = $fsmos
@@ -44,8 +47,8 @@ $results = foreach ($dc in $domainControllers) {
             [PSCustomObject]@{
                 Name              = $dc.Name
                 Site              = $dc.Site
-                IPv4Address       = $dc.IPv4Address.IPAddressToString
-                OSVersion         = "Error"
+                IPv4Address       = $ip
+                OSVersion         = $osVersion
                 IsGlobalCatalog   = $dc.IsGlobalCatalog
                 IsReadOnly        = $dc.IsReadOnly
                 FSMOHolder        = $fsmos
@@ -61,8 +64,8 @@ $results = foreach ($dc in $domainControllers) {
         [PSCustomObject]@{
             Name              = $dc.Name
             Site              = $dc.Site
-            IPv4Address       = $dc.IPv4Address.IPAddressToString
-            OSVersion         = "Unreachable"
+            IPv4Address       = $ip
+            OSVersion         = $osVersion
             IsGlobalCatalog   = $dc.IsGlobalCatalog
             IsReadOnly        = $dc.IsReadOnly
             FSMOHolder        = $fsmos
@@ -76,8 +79,6 @@ $results = foreach ($dc in $domainControllers) {
     }
 }
 
-# Display results
+# Output results
 $results | Format-Table -AutoSize
-
-# Optional export
 $results | Export-Csv -Path "Full_DC_Health_Report.csv" -NoTypeInformation
