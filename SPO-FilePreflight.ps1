@@ -1,3 +1,5 @@
+# This script will ask user for a path, then scan the path in preparation to move the root folder supplied to a Sharepoint document library with all subfolders also being migrated. 
+# The report will list: Illegal charachters in folder or file names, restricted file types, and paths that are too long
 # Prompt for input path
 $sourcePath = Read-Host "Enter the full path of the folder to scan for SharePoint Online migration"
 
