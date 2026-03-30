@@ -1,6 +1,4 @@
 # This script will list out all computer objects in the domain, include the name, descrrition, creation date, and who created the object.
-
-
 # Requires Active Directory module
 # Import-Module ActiveDirectory  # Uncomment if not auto-loaded
 
@@ -26,7 +24,10 @@ function Get-ComputerAccountDetails {
 
     $computers = Get-ADComputer @params
 
-    $results = foreach ($computer in $computers) {
+    # Use an explicit list to collect results reliably in PowerShell 7
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    foreach ($computer in $computers) {
         # Extract the creator from the security descriptor owner
         $creator = try {
             $computer.nTSecurityDescriptor.Owner
@@ -37,13 +38,13 @@ function Get-ComputerAccountDetails {
         # Parse the OU from the DistinguishedName by stripping the first CN component
         $ou = ($computer.DistinguishedName -split ",", 2)[1]
 
-        [PSCustomObject]@{
+        $results.Add([PSCustomObject]@{
             Name        = $computer.Name
             Description = $computer.Description
             CreatedDate = $computer.whenCreated
             CreatedBy   = $creator
             OU          = $ou
-        }
+        })
     }
 
     return $results
@@ -52,17 +53,12 @@ function Get-ComputerAccountDetails {
 # --- Run and display ---
 $computers = Get-ComputerAccountDetails
 
-$computers | Format-Table -AutoSize
+if ($computers -and $computers.Count -gt 0) {
+    $computers | Format-Table -AutoSize
 
-# Optional: Export to CSV
-# $computers | Export-Csv -Path ".\ComputerAccounts.csv" -NoTypeInformation
-```
-
-**What changed:**
-- Added `DistinguishedName` to the properties list — this is always returned by AD and contains the full LDAP path of the object
-- The OU is parsed by splitting the `DistinguishedName` on the first comma and taking everything after it, which strips the `CN=ComputerName` portion and leaves the full OU path
-
-**Example output for the OU field:**
-```
-# Full DN:  CN=DESKTOP-01,OU=Workstations,OU=Computers,DC=contoso,DC=com
-# OU field: OU=Workstations,OU=Computers,DC=contoso,DC=com
+    # Export to CSV
+    $computers | Export-Csv -Path ".\ComputerAccounts.csv" -NoTypeInformation
+    Write-Host "Exported $($computers.Count) records to ComputerAccounts.csv" -ForegroundColor Green
+} else {
+    Write-Host "No computer accounts found or an error occurred." -ForegroundColor Yellow
+}
