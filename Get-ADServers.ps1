@@ -16,7 +16,8 @@ function Get-ServerAccountDetails {
             "whenCreated",
             "nTSecurityDescriptor",
             "DistinguishedName",
-            "OperatingSystem"
+            "OperatingSystem",
+            "LastLogonDate"
         )
     }
 
@@ -46,6 +47,7 @@ function Get-ServerAccountDetails {
             CreatedDate     = $computer.whenCreated
             CreatedBy       = $creator
             OU              = $ou
+            LastLogon       = $computer.LastLogonDate
         })
     }
 
