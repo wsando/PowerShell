@@ -1,4 +1,4 @@
-# This script will list out all computer objects in the domain, include the name, descrrition, creation date, and who created the object.
+# This script will list out all computer objects in the domain, include the name, Description, creation date, and who created the object.
 # Requires Active Directory module
 # Import-Module ActiveDirectory  # Uncomment if not auto-loaded
 
